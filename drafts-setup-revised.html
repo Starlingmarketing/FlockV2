@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Setup - Create Email Drafts{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1>Create Email Drafts</h1>
+    <p>Upload your contact list and configure settings to create personalized email drafts.</p>
+</div>
+
+<div class="tabs-container">
+    <div class="main-tabs">
+        <a href="{{ url_for('drafts_setup') }}" class="main-tab active">1. Setup</a>
+        <a href="{{ url_for('drafts_ai_settings') }}" class="main-tab">2. AI Settings</a>
+        <a href="{{ url_for('drafts_manual') }}" class="main-tab">3. Manual Process</a>
+        <a href="{{ url_for('drafts_automation') }}" class="main-tab">4. Automation</a>
+    </div>
+    
+    <div class="sub-tabs-container">
+        <div class="tab-content active">
+            <div class="card mb-6">
+                <div class="card-header">
+                    <h3 class="card-title">CSV File Selection</h3>
+                </div>
+                
+                <form id="csv-upload-form" class="mb-4">
+                    <div class="form-group">
+                        <label for="csv-file">Upload CSV File:</label>
+                        <input type="file" id="csv-file" name="csv_file" accept=".csv">
+                        <p class="text-gray-600 mt-2">Upload a CSV containing your recipient information.</p>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload File
+                    </button>
+                </form>
+                
+                <div id="csv-result" class="alert alert-info hidden">
+                    <!-- Results will appear here -->
+                </div>
+            </div>
+            
+            <div class="card mb-6">
+                <div class="card-header">
+                    <h3 class="card-title">Column Settings</h3>
+                </div>
+                
+                <form id="column-settings-form">
+                    <div class="form-group">
+                        <label for="email-column">Email Column:</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="email-column" name="email_column" value="C" maxlength="1" style="width: 60px;">
+                            <span class="text-gray-600">(A, B, C, etc.)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="name-column">First Name Column:</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="name-column" name="name_column" value="A" maxlength="1" style="width: 60px;">
+                            <span class="text-gray-600">(Default: A)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="company-column">Company Column:</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="company-column" name="company_column" value="F" maxlength="1" style="width: 60px;">
+                            <span class="text-gray-600">(Default: F)</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card mb-6">
+                <div class="card-header">
+                    <h3 class="card-title">Email Template</h3>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="use-template" checked>
+                        <label for="use-template" style="margin-bottom: 0;">Use Email Template</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="use-perplexity">
+                        <label for="use-perplexity" style="margin-bottom: 0;">Use Perplexity API for AI-Generated Content</label>
+                    </div>
+                    <p class="text-gray-600 mt-2">Enable to use AI for generating personalized email content.</p>
+                </div>
+                
+                <div id="template-fields">
+                    <div class="form-group">
+                        <label for="subject">Subject Line:</label>
+                        <input type="text" id="subject" placeholder="e.g., Partnership opportunity with {company}">
+                        <p class="text-gray-600 mt-2">Use {first_name} and {company} as placeholders for personalization.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="body-template">Email Body:</label>
+                        <textarea id="body-template" rows="8" placeholder="Hi {first_name},
+
+I hope this email finds you well. I recently came across {company} and was impressed by your work in the industry.
+
+[Your email content here]
+
+Looking forward to connecting,
+Your Name"></textarea>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <p><strong>Note:</strong> If using Perplexity AI:</p>
+                    <ul class="mb-0" style="padding-left: 20px;">
+                        <li>Configure your API key in the "AI Settings" tab</li>
+                        <li>Each email will be uniquely generated based on recipient data</li>
+                        <li>The template above will be used as a fallback if AI fails</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="text-right">
+                <button id="next-btn" class="btn btn-primary">
+                    Save & Continue to AI Settings <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle template fields based on checkbox
+    const useTemplateCheckbox = document.getElementById('use-template');
+    const templateFields = document.getElementById('template-fields');
+    
+    useTemplateCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            templateFields.style.display = 'block';
+        } else {
+            templateFields.style.display = 'none';
+        }
+    });
+    
+    // Handle CSV form upload
+    const csvForm = document.getElementById('csv-upload-form');
+    const csvResult = document.getElementById('csv-result');
+    
+    csvForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get form data from both CSV form and column settings
+        const formData = new FormData(csvForm);
+        const emailColumn = document.getElementById('email-column').value;
+        const nameColumn = document.getElementById('name-column').value;
+        const companyColumn = document.getElementById('company-column').value;
+        
+        formData.append('email_column', emailColumn);
+        formData.append('name_column', nameColumn);
+        formData.append('company_column', companyColumn);
+        
+        // Show loading state
+        csvResult.innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div> Processing CSV file...</div>';
+        csvResult.classList.remove('hidden', 'alert-success', 'alert-danger');
+        csvResult.classList.add('alert-info');
+        
+        // Send API request
+        fetch('/api/upload-csv', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message with preview of emails
+                let previewEmails = '';
+                if (data.preview && data.preview.length > 0) {
+                    previewEmails = '<ul class="mt-2">';
+                    data.preview.forEach(email => {
+                        previewEmails += `<li>${email}</li>`;
+                    });
+                    previewEmails += '</ul>';
+                    
+                    if (data.count > data.preview.length) {
+                        previewEmails += `<p class="mt-2">...and ${data.count - data.preview.length} more emails</p>`;
+                    }
+                }
+                
+                csvResult.innerHTML = `
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            <strong>Success!</strong> ${data.message}
+                        </div>
+                        ${previewEmails}
+                    </div>
+                `;
+                csvResult.classList.remove('alert-info', 'alert-danger');
+                csvResult.classList.add('alert-success');
+            } else {
+                // Show error message
+                csvResult.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-exclamation-circle text-danger"></i>
+                        <strong>Error:</strong> ${data.error}
+                    </div>
+                `;
+                csvResult.classList.remove('alert-info', 'alert-success');
+                csvResult.classList.add('alert-danger');
+            }
+        })
+        .catch(error => {
+            csvResult.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-exclamation-circle text-danger"></i>
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+            csvResult.classList.remove('alert-info', 'alert-success');
+            csvResult.classList.add('alert-danger');
+        });
+    });
+    
+    // Handle next button to go to AI settings
+    const nextBtn = document.getElementById('next-btn');
+    nextBtn.addEventListener('click', function() {
+        // Save form data to session storage
+        const templateData = {
+            useTemplate: document.getElementById('use-template').checked,
+            usePerplexity: document.getElementById('use-perplexity').checked,
+            subject: document.getElementById('subject').value,
+            body: document.getElementById('body-template').value
+        };
+        
+        sessionStorage.setItem('templateData', JSON.stringify(templateData));
+        
+        // Redirect to AI settings page
+        window.location.href = "{{ url_for('drafts_ai_settings') }}";
+    });
+    
+    // Load data from session storage if exists
+    const savedTemplateData = sessionStorage.getItem('templateData');
+    if (savedTemplateData) {
+        const templateData = JSON.parse(savedTemplateData);
+        document.getElementById('use-template').checked = templateData.useTemplate;
+        document.getElementById('use-perplexity').checked = templateData.usePerplexity;
+        document.getElementById('subject').value = templateData.subject;
+        document.getElementById('body-template').value = templateData.body;
+        
+        // Toggle template fields based on saved state
+        if (!templateData.useTemplate) {
+            templateFields.style.display = 'none';
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Error {{ error_code }} - Gmail Automation Suite{% endblock %}
+
+{% block content %}
+<div class="error-container text-center py-16">
+    <div class="error-code text-primary" style="font-size: 6rem; font-weight: bold;">{{ error_code }}</div>
+    
+    <h1 class="error-title text-gray-800 text-3xl mb-4">{{ message }}</h1>
+    
+    <p class="error-description text-gray-600 mb-8">
+        Something went wrong. We apologize for the inconvenience.
+    </p>
+    
+    <div class="error-actions">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="fas fa-home mr-2"></i> Return to Homepage
+        </a>
+    </div>
+</div>
+{% endblock %}
